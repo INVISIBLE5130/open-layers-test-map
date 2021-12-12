@@ -1,30 +1,35 @@
-const target = document.getElementById('map')
+const target = document.getElementById('map'),
+    features = []
 let defaultCenter = [3171025.343207729, 6313381.5165618025]
 
-const iconFeature = new ol.Feature({
-    geometry: new ol.geom.Point([0, 0]),
-    // name: 'Null Island',
-    population: 4000,
-    rainfall: 500,
-    name: 'Point'
-});
+let iconFeature
 
 const iconStyle = new ol.style.Style({
     image: new ol.style.Icon({
-        anchor: [0.5, 46],
+        anchor: [0.5, 58],
         anchorXUnits: 'fraction',
         anchorYUnits: 'pixels',
         src: 'https://img.icons8.com/ios-filled/50/000000/marker-p.png',
     }),
 });
 
-iconFeature.setStyle(iconStyle);
+for (let i = 0; i < 10; i++) {
+    iconFeature = new ol.Feature({
+        geometry: new ol.geom.Point([i, i]),
+        // name: 'Null Island',
+        population: 4000,
+        rainfall: 500,
+        name: 'Point'
+    });
+    iconFeature.setStyle(iconStyle);
+    features.push(iconFeature)
+}
 
 //Map
 
 const viewCenter = new ol.View({
     center: defaultCenter,
-    zoom: 0,
+    zoom: 3,
     maxZoom: 15,
     minZoom: 0,
     enableRotation: true,
@@ -35,7 +40,7 @@ function viewCenterAnimation(center) {
     viewCenter.animate({
         center: center,
         duration: 2000,
-        zoom: 1
+        zoom: 3
     })
 }
 
@@ -47,7 +52,7 @@ const tileLayer = new ol.layer.Tile({
 
 const source = new ol.source.Vector({
     wrapX: false,
-    features: [iconFeature],
+    features: [...features],
 });
 
 source.on('addfeature', e => {
@@ -165,6 +170,7 @@ map.on('click', e => {
 function addRandomFeature(x, y) {
     const geom = new ol.geom.Point(ol.proj.fromLonLat([x, y]));
     const feature = new ol.Feature(geom);
+    features.push(feature)
     source.addFeature(feature);
 }
 
@@ -223,3 +229,51 @@ new ol.layer.Vector({
         features: [accuracyFeature, positionFeature, iconFeature],
     }),
 });
+
+//Group layers
+
+let getStyle = function(feature) {
+
+    let length = feature.get('features').length;
+    return [
+        new ol.style.Style({
+
+            image: new ol.style.Circle({
+                radius: Math.min(
+                    Math.max(length * 0.8, 10), 15
+                ),
+                fill: new ol.style.Fill({
+                    color: [0, 204, 0, 0.6]
+                })
+            }),
+            text: new ol.style.Text({
+                text: length.toString(),
+                fill: new ol.style.Fill({
+                    color: 'black'
+                })
+            }),
+            stroke: new ol.style.Stroke({
+                color: [0, 51, 0, 1],
+                width: 1
+            }),
+            font: '26px "Helvetica Neue", Arial'
+        })
+    ];
+};
+
+let clusterSource = new ol.source.Cluster({
+    distance: 100,
+    source: new ol.source.Vector({
+        features: features
+    })
+});
+
+// Animated cluster layer
+let clusterLayer = new ol.layer.AnimatedCluster({
+    source: clusterSource,
+    // Use a style function for cluster symbolisation
+    style: getStyle
+});
+
+
+map.addLayer(clusterLayer);
